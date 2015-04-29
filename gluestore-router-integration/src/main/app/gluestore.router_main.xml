@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.4.1"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
+    <context:property-placeholder location="mule.${mule.env}.properties"/>
+    <jms:activemq-connector name="Active_MQ" brokerURL="${brokerURL}" validateConnections="true" doc:name="Active MQ" username="${brokerUsername}" password="${brokerPassword}" specification="1.1"/>
+    <flow name="gluestore.router.integrationFlow">
+        <jms:inbound-endpoint doc:name="Consume JMS_Router" exchange-pattern="request-response" queue="mule.core.entity.update" connector-ref="Active_MQ">
+            <jms:transaction action="BEGIN_OR_JOIN"/>
+        </jms:inbound-endpoint>
+        <jms:jmsmessage-to-object-transformer doc:name="JMSMessage to Object"/>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+        <choice doc:name="Notification Choice">
+            <when expression="#[payload.contains('notificationType')]">
+                <vm:outbound-endpoint exchange-pattern="request-response"  doc:name="Notification.Reminder" path="gs.router.notification.reminder">
+                    <vm:transaction action="BEGIN_OR_JOIN"/>
+                </vm:outbound-endpoint>
+            </when>
+            <when expression="#[payload.contains('type') &amp;&amp; payload.contains('action')]">
+                <vm:outbound-endpoint exchange-pattern="request-response"  doc:name="Notification.Update" path="gs.router.notification.update">
+                    <vm:transaction action="BEGIN_OR_JOIN"/>
+                </vm:outbound-endpoint>
+            </when>
+            <otherwise>
+                <set-payload value="Payload of the JMSMessage is invalid." doc:name="Invalid Payload"/>
+            </otherwise>
+        </choice>
+    </flow>
+</mule>

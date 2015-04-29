@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:jbossts="http://www.mulesoft.org/schema/mule/jbossts" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.4.1"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/jbossts http://www.mulesoft.org/schema/mule/jbossts/current/mule-jbossts.xsd">
+	<jbossts:transaction-manager doc:name="JBoss Transaction Manager">
+	    <property key="com.arjuna.ats.arjuna.coordinator.defaultTimeout" value="47" /><!-- this is in seconds -->
+	    <property key="com.arjuna.ats.arjuna.coordinator.txReaperTimeout" value="108000"/><!-- this is in milliseconds -->
+	</jbossts:transaction-manager>
+    <jms:activemq-xa-connector name="jmsXAConnector" brokerURL="${brokerURL}" validateConnections="true" doc:name="Active MQ XA" username="${brokerUsername}" password="${brokerPassword}" specification="1.1"/>
+    <flow name="parcelpoint.notification.reminderFlow">
+        <vm:inbound-endpoint exchange-pattern="request-response" doc:name="VM_Notification.Reminder" path="gs.router.notification.reminder">
+            <vm:transaction action="NOT_SUPPORTED"/>
+        </vm:inbound-endpoint>
+        <jms:outbound-endpoint   connector-ref="jmsXAConnector" doc:name="Notification.Reminder Queue" exchange-pattern="request-response" topic="notification.reminder">
+            <xa-transaction action="ALWAYS_BEGIN"/>
+        </jms:outbound-endpoint>
+    </flow>
+</mule>

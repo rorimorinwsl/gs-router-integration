@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:jbossts="http://www.mulesoft.org/schema/mule/jbossts" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.4.1"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/jbossts http://www.mulesoft.org/schema/mule/jbossts/current/mule-jbossts.xsd">
+    <flow name="parcelpoint.notification.updateFlow">
+        <vm:inbound-endpoint exchange-pattern="request-response" doc:name="VM.Notification.Update" path="gs.router.notification.update">
+            <vm:transaction action="NOT_SUPPORTED"/>
+        </vm:inbound-endpoint>
+        <set-variable variableName="type" value="#[json:/type]" doc:name="Get Type"/>
+        <set-variable variableName="action" value="#[json:/action]" doc:name="Get Action"/>
+        <choice doc:name="Choice">
+            <when expression="#[flowVars.type=='CONSIGNMENT']">
+                <choice doc:name="Consignment.Action">
+                    <when expression="#[flowVars.action=='Add']">
+                        <jms:outbound-endpoint doc:name="Consignment.Add Topic" topic="consigment.add" exchange-pattern="request-response" connector-ref="jmsXAConnector">
+                            <xa-transaction action="ALWAYS_BEGIN"/>
+                        </jms:outbound-endpoint>
+                    </when>
+                    <when expression="#[flowVars.action=='Update']">
+                        <jms:outbound-endpoint doc:name="Consignment.Update Topic" exchange-pattern="request-response" topic="consigment.update" connector-ref="jmsXAConnector">
+                            <xa-transaction action="ALWAYS_BEGIN"/>
+                        </jms:outbound-endpoint>
+                    </when>
+                    <otherwise>
+                        <set-payload value="Consignment action is not on the choice." doc:name="Invalid Type"/>
+                    </otherwise>
+                </choice>
+            </when>
+            <when expression="#[flowVars.type=='FULFILMENT']">
+                <choice doc:name="Fulfilment.Action">
+                    <when expression="#[flowVars.action=='Add']">
+                        <jms:outbound-endpoint doc:name="Fulfilment.Add Topic" topic="fulfilment.add" connector-ref="jmsXAConnector" exchange-pattern="request-response">
+                            <xa-transaction action="ALWAYS_BEGIN"/>
+                        </jms:outbound-endpoint>
+                    </when>
+                    <when expression="#[flowVars.action=='Update']">
+                        <jms:outbound-endpoint doc:name="Fulfilment.Update Topic" topic="fulfilment.update" connector-ref="jmsXAConnector" exchange-pattern="request-response">
+                            <xa-transaction action="ALWAYS_BEGIN"/>
+                        </jms:outbound-endpoint>
+                    </when>
+                    <otherwise>
+                        <set-payload value="Fulfilment action is not on the choice." doc:name="Invalid Type"/>
+                    </otherwise>
+                </choice>
+            </when>
+            <otherwise>
+                <set-payload value="Notification.update is not on the choice." doc:name="Invalid Type"/>
+            </otherwise>
+        </choice>
+    </flow>
+</mule>
